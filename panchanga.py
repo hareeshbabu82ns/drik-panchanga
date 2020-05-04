@@ -56,7 +56,7 @@ reset_ayanamsa_mode = lambda: swe.set_sid_mode(swe.SIDM_FAGAN_BRADLEY)
 def get_planet_name(planet):
   names = { swe.SURYA: 'Surya', swe.CHANDRA: 'Candra', swe.KUJA: 'Mangala',
             swe.BUDHA: 'Budha', swe.GURU: 'Guru', swe.SUKRA: 'Sukra',
-            swe.SANI: 'Sani', swe.RAHU: 'Rahu', swe.KETU: 'Ketu', swe.PLUTO: 'Ketu'}
+            swe.SANI: 'Sani', swe.MEAN_NODE: 'Rahu', swe.KETU: 'Ketu', swe.PLUTO: 'Ketu'}
   return names[planet]
 
 # Convert 23d 30' 30" to 23.508333 degrees
@@ -167,7 +167,7 @@ def nakshatra_pada(longitude):
 def sidereal_longitude(jd, planet):
   """Computes nirayana (sidereal) longitude of given planet on jd"""
   set_ayanamsa_mode()
-  longi = swe.calc_ut(jd, planet, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)
+  longi = swe.calc_ut(jd, planet, flag = swe.FLG_SWIEPH | swe.FLG_SIDEREAL)[0]
   reset_ayanamsa_mode()
   return norm360(longi[0]) # degrees
 
@@ -543,7 +543,8 @@ def planetary_positions(jd, place):
     if planet != swe.KETU:
       nirayana_long = sidereal_longitude(jd_ut, planet)
     else: # Ketu
-      nirayana_long = ketu(sidereal_longitude(jd_ut, swe.RAHU))
+      nirayana_long = ketu(sidereal_longitude(jd_ut, swe.MEAN_NODE))
+      # nirayana_long = ketu(sidereal_longitude(jd_ut, swe.RAHU))
 
     # 12 zodiac signs span 360°, so each one takes 30°
     # 0 = Mesha, 1 = Vrishabha, ..., 11 = Meena
@@ -590,7 +591,7 @@ def navamsa(jd, place):
     if planet != swe.KETU:
       nirayana_long = sidereal_longitude(jd_utc, planet)
     else: # Ketu
-      nirayana_long = ketu(sidereal_longitude(jd_utc, swe.RAHU))
+      nirayana_long = ketu(sidereal_longitude(jd_utc, swe.MEAN_NODE))
 
     positions.append([planet, navamsa_from_long(nirayana_long)])
 
