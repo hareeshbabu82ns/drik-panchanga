@@ -27,25 +27,29 @@ Calculates Vimshottari (=120) Dasha-bhukti-antara-sukshma-prana
 """
 
 from __future__ import division
+from datetime import datetime
 from math import ceil
 import swisseph as swe
 from collections import OrderedDict as Dict
-from panchanga import sidereal_longitude, sidereal_year, get_planet_name
+from panchanga import sidereal_longitude, sidereal_year, get_planet_name, gregorian_to_jd, jd_to_gregorian
 
 swe.KETU = swe.PLUTO  # I've mapped Pluto to Ketu
 vimsottari_year = sidereal_year  # some say 360 days, others 365.25 or 365.2563 etc
 
 # Nakshatra lords, order matters. See https://en.wikipedia.org/wiki/Dasha_(astrology)
-adhipati_list = [ swe.KETU, swe.SUKRA, swe.SURYA, swe.CHANDRA, swe.KUJA,
-                  swe.RAHU, swe.GURU, swe.SANI, swe.BUDHA ]
+adhipati_list = [swe.KETU, swe._SUKRA, swe._SURYA, swe._CHANDRA, swe._KUJA,
+                 swe._RAHU, swe._GURU, swe._SANI, swe._BUDHA]
 
 # (Maha-)dasha periods (in years)
-mahadasa = { swe.KETU: 7, swe.SUKRA: 20, swe.SURYA: 6, swe.CHANDRA: 10, swe.KUJA: 7,
-             swe.RAHU: 18, swe.GURU: 16, swe.SANI: 19, swe.BUDHA: 17 }
+mahadasa = {swe.KETU: 7, swe._SUKRA: 20, swe._SURYA: 6, swe._CHANDRA: 10, swe._KUJA: 7,
+            swe._RAHU: 18, swe._GURU: 16, swe._SANI: 19, swe._BUDHA: 17}
 
 # assert(0 <= nak <= 26)
 # Return nakshatra lord (adhipati)
-adhipati = lambda nak: adhipati_list[nak % (len(adhipati_list))]
+
+
+def adhipati(nak): return adhipati_list[nak % (len(adhipati_list))]
+
 
 def next_adhipati(lord):
     """Returns next guy after `lord` in the adhipati_list"""
@@ -53,14 +57,16 @@ def next_adhipati(lord):
     next_index = (current + 1) % len(adhipati_list)
     return adhipati_list[next_index]
 
+
 def nakshatra_position(jdut1):
     """Get the Nakshatra index and degrees traversed at a given JD(UT1) """
     moon = sidereal_longitude(jdut1, swe.MOON)
     one_star = (360 / 27.)        # 27 nakshatras span 360°
     nak = int(moon / one_star)    # 0..26
-    rem = (moon - nak * one_star) # degrees traversed in given nakshatra
+    rem = (moon - nak * one_star)  # degrees traversed in given nakshatra
 
     return [nak, rem]
+
 
 def dasha_start_date(jdut1):
     """Returns the start date (UT1) of the mahadasa which occured on or before `jd(UT1)`"""
@@ -68,11 +74,12 @@ def dasha_start_date(jdut1):
     one_star = (360 / 27.)        # 27 nakshatras span 360°
     lord = adhipati(nak)          # ruler of current nakshatra
     period = mahadasa[lord]       # total years of nakshatra lord
-    period_elapsed = rem / one_star * period # years
+    period_elapsed = rem / one_star * period  # years
     period_elapsed *= vimsottari_year        # days
     start_date = jdut1 - period_elapsed      # so many days before current day
 
     return [lord, start_date]
+
 
 def vimsottari_mahadasa(jdut1):
     """List all mahadashas and their start dates"""
@@ -84,6 +91,7 @@ def vimsottari_mahadasa(jdut1):
         lord = next_adhipati(lord)
 
     return retval
+
 
 def vimsottari_bhukti(maha_lord, start_date):
     """Compute all bhuktis of given nakshatra-lord of Mahadasa
@@ -100,6 +108,8 @@ def vimsottari_bhukti(maha_lord, start_date):
 
 # North Indian tradition: dasa-antardasa-pratyantardasa
 # South Indian tradition: dasa-bhukti-antara-sukshma
+
+
 def vimsottari_antara(maha_lord, bhukti_lord, start_date):
     """Compute all antaradasas from given bhukit's start date.
     The bhukti's lord and its lord (mahadasa lord) must be given"""
@@ -120,7 +130,8 @@ def where_occurs(jd, some_dict):
     # It is assumed that the dict is sorted in ascending order
     # i.e. some_dict[i] < some_dict[j]  where i < j
     for key in reversed(some_dict.keys()):
-        if some_dict[key] < jd: return key
+        if some_dict[key] < jd:
+            return key
 
 
 def compute_antara_from(jd, mahadashas):
@@ -137,10 +148,12 @@ def compute_antara_from(jd, mahadashas):
     return (i, j, antara)
 
 # ---------------------- ALL TESTS ------------------------------
+
+
 def adhipati_tests():
     # nakshatra indexes counted from 0
     satabhisha, citta, aslesha = 23, 13, 8
-    assert(adhipati(satabhisha) == swe.RAHU)
+    assert(adhipati(satabhisha) == swe._RAHU)
     assert(mahadasa[adhipati(satabhisha)] == 18)
     assert(adhipati(citta) == swe.MARS)
     assert(mahadasa[adhipati(citta)] == 7)
@@ -151,7 +164,7 @@ def adhipati_tests():
 if __name__ == "__main__":
     adhipati_tests()
     # YYYY-MM-DD 09:40 IST = 04:10 UTC
-    jdut1 = swe.utc_to_jd(1985, 6, 9, 4, 10, 0, flag = swe.GREG_CAL)[1]
+    jdut1 = swe.utc_to_jd(1985, 6, 9, 4, 10, 0, flag=swe.GREG_CAL)[1]
     tz = 5.5
     print("jdut1", jdut1)
     dashas = vimsottari_mahadasa(jdut1)
@@ -161,7 +174,8 @@ if __name__ == "__main__":
         for j in bhuktis:
             jd = bhuktis[j]
             y, m, d, h = swe.revjul(round(jd + tz))
-            print('%8s: %04d-%02d-%02d\t%.6lf' % (get_planet_name(j), y, m, d, jd))
+            print('%8s: %04d-%02d-%02d\t%.6lf' %
+                  (get_planet_name(j), y, m, d, jd))
 
     jd = 2456950       # Some random date, ex: current date
     i, j, antara = compute_antara_from(jd, dashas)

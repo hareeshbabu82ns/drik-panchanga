@@ -34,3 +34,5 @@ venv
 .mr.developer.cfg
 .project
 .pydevproject
+__pycache__
+.ipynb_checkpoints
